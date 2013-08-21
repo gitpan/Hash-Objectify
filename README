@@ -2,13 +2,13 @@ NAME
     Hash::Objectify - Create objects from hashes on the fly
 
 VERSION
-    version 0.001
+    version 0.002
 
 SYNOPSIS
       use Hash::Objectify;
 
       # turn a hash reference into an object with accessors
-  
+
       $object = objectify { foo => 'bar', wibble => 'wobble' };
       print $object->foo;
 
@@ -25,7 +25,7 @@ DESCRIPTION
     objects without the extra work of setting up an entire response class
     with the framework of your choice.
 
-    Using <Hash::Objectify> is slower than accessing the keys of the hash
+    Using Hash::Objectify is slower than accessing the keys of the hash
     directly, but does provide "typo protection" since a misspelled method
     is an error.
 
@@ -63,13 +63,13 @@ USAGE
     want Hash::Objectify for access to the keys of a blessed hash, you
     should make an explicit, shallow copy:
 
-      my $copy = objectified {%$object};
+      my $copy = objectify {%$object};
 
 SUPPORT
   Bugs / Feature Requests
     Please report any bugs or feature requests through the issue tracker at
-    <http://rt.cpan.org/Public/Dist/Display.html?Name=Hash-Objectify>. You
-    will be notified automatically of any progress on your issue.
+    <https://github.com/dagolden/hash-objectify/issues>. You will be
+    notified automatically of any progress on your issue.
 
   Source Code
     This is open source software. The code repository is available for
@@ -77,7 +77,7 @@ SUPPORT
 
     <https://github.com/dagolden/hash-objectify>
 
-      git clone https://github.com/dagolden/hash-objectify.git
+      git clone git://github.com/dagolden/hash-objectify.git
 
 AUTHOR
     David Golden <dagolden@cpan.org>

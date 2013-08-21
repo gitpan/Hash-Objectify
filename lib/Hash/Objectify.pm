@@ -5,7 +5,7 @@ use warnings;
 package Hash::Objectify;
 
 # ABSTRACT: Create objects from hashes on the fly
-our $VERSION = '0.001'; # VERSION
+our $VERSION = '0.002'; # VERSION
 
 use Carp;
 use Sub::Install;
@@ -15,45 +15,45 @@ my %CACHE;
 my $COUNTER = 0;
 
 sub import {
-  my ($class) = @_;
-  my $caller = caller;
+    my ($class) = @_;
+    my $caller = caller;
 
-  Sub::Install::install_sub(
-    {
-      code => sub {
-        my ( $ref, $package ) = @_;
-        my $type = ref $ref;
-        unless ( $type eq 'HASH' ) {
-          $type
-            = $type eq '' ? "a scalar value"
-            : blessed($ref) ? "an object of class $type"
-            :                 "a reference of type $type";
-          croak "Error: Can't objectify $type";
+    Sub::Install::install_sub(
+        {
+            code => sub {
+                my ( $ref, $package ) = @_;
+                my $type = ref $ref;
+                unless ( $type eq 'HASH' ) {
+                    $type =
+                        $type eq ''   ? "a scalar value"
+                      : blessed($ref) ? "an object of class $type"
+                      :                 "a reference of type $type";
+                    croak "Error: Can't objectify $type";
+                }
+                if ( defined $package ) {
+                    no strict 'refs';
+                    @{ $package . '::ISA' } = 'Hash::Objectified'
+                      unless $package->isa('Hash::Objectified');
+                }
+                else {
+                    my ( $caller, undef, $line ) = caller;
+                    my $cachekey = join "", keys %$ref;
+                    if ( !defined $CACHE{$caller}{$line}{$cachekey} ) {
+                        no strict 'refs';
+                        $package = $CACHE{$caller}{$line}{$cachekey} = "Hash::Objectified$COUNTER";
+                        $COUNTER++;
+                        @{ $package . '::ISA' } = 'Hash::Objectified';
+                    }
+                    else {
+                        $package = $CACHE{$caller}{$line}{$cachekey};
+                    }
+                }
+                bless {%$ref}, $package;
+            },
+            into => $caller,
+            as   => 'objectify',
         }
-        if ( defined $package ) {
-          no strict 'refs';
-          @{ $package . '::ISA' } = 'Hash::Objectified'
-            unless $package->isa('Hash::Objectified');
-        }
-        else {
-          my ( $caller, undef, $line ) = caller;
-          my $cachekey = join "", keys %$ref;
-          if ( !defined $CACHE{$caller}{$line}{$cachekey} ) {
-            no strict 'refs';
-            $package = $CACHE{$caller}{$line}{$cachekey} = "Hash::Objectified$COUNTER";
-            $COUNTER++;
-            @{ $package . '::ISA' } = 'Hash::Objectified';
-          }
-          else {
-            $package = $CACHE{$caller}{$line}{$cachekey};
-          }
-        }
-        bless {%$ref}, $package;
-      },
-      into => $caller,
-      as   => 'objectify',
-    }
-  );
+    );
 }
 
 package Hash::Objectified;
@@ -63,26 +63,26 @@ use Class::XSAccessor;
 our $AUTOLOAD;
 
 sub can {
-  my ( $self, $key ) = @_;
-  $self->$key; # install accessor if not installed
-  return $self->SUPER::can($key);
+    my ( $self, $key ) = @_;
+    $self->$key; # install accessor if not installed
+    return $self->SUPER::can($key);
 }
 
 sub AUTOLOAD {
-  my $self   = shift;
-  my $method = $AUTOLOAD;
-  $method =~ s/.*:://;
-  if ( ref $self && exists $self->{$method} ) {
-    Class::XSAccessor->import(
-      accessors => { $method => $method },
-      class     => ref $self
-    );
-  }
-  else {
-    my $class = ref $self || $self;
-    die qq{Can't locate object method "$method" via package "$class"};
-  }
-  return $self->$method(@_);
+    my $self   = shift;
+    my $method = $AUTOLOAD;
+    $method =~ s/.*:://;
+    if ( ref $self && exists $self->{$method} ) {
+        Class::XSAccessor->import(
+            accessors => { $method => $method },
+            class     => ref $self
+        );
+    }
+    else {
+        my $class = ref $self || $self;
+        die qq{Can't locate object method "$method" via package "$class"};
+    }
+    return $self->$method(@_);
 }
 
 sub DESTROY { } # because we AUTOLOAD, we need this too
@@ -90,10 +90,13 @@ sub DESTROY { } # because we AUTOLOAD, we need this too
 1;
 
 
-# vim: ts=2 sts=2 sw=2 et:
+# vim: ts=4 sts=4 sw=4 et:
 
 __END__
+
 =pod
+
+=encoding utf-8
 
 =head1 NAME
 
@@ -101,14 +104,14 @@ Hash::Objectify - Create objects from hashes on the fly
 
 =head1 VERSION
 
-version 0.001
+version 0.002
 
 =head1 SYNOPSIS
 
   use Hash::Objectify;
 
   # turn a hash reference into an object with accessors
-  
+
   $object = objectify { foo => 'bar', wibble => 'wobble' };
   print $object->foo;
 
@@ -126,7 +129,7 @@ One application of this module could be to create lightweight response objects
 without the extra work of setting up an entire response class with the
 framework of your choice.
 
-Using <Hash::Objectify> is slower than accessing the keys of the hash directly, but
+Using Hash::Objectify is slower than accessing the keys of the hash directly, but
 does provide "typo protection" since a misspelled method is an error.
 
 =for Pod::Coverage method_names_here
@@ -165,7 +168,7 @@ is true even for objects based on blessed hash references, since the correct
 semantics are not universally obvious.  If you really want Hash::Objectify for
 access to the keys of a blessed hash, you should make an explicit, shallow copy:
 
-  my $copy = objectified {%$object};
+  my $copy = objectify {%$object};
 
 =for :stopwords cpan testmatrix url annocpan anno bugtracker rt cpants kwalitee diff irc mailto metadata placeholders metacpan
 
@@ -174,7 +177,7 @@ access to the keys of a blessed hash, you should make an explicit, shallow copy:
 =head2 Bugs / Feature Requests
 
 Please report any bugs or feature requests through the issue tracker
-at L<http://rt.cpan.org/Public/Dist/Display.html?Name=Hash-Objectify>.
+at L<https://github.com/dagolden/hash-objectify/issues>.
 You will be notified automatically of any progress on your issue.
 
 =head2 Source Code
@@ -184,7 +187,7 @@ public review and contribution under the terms of the license.
 
 L<https://github.com/dagolden/hash-objectify>
 
-  git clone https://github.com/dagolden/hash-objectify.git
+  git clone git://github.com/dagolden/hash-objectify.git
 
 =head1 AUTHOR
 
@@ -199,4 +202,3 @@ This is free software, licensed under:
   The Apache License, Version 2.0, January 2004
 
 =cut
-
